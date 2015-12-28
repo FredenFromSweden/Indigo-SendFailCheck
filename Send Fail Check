@@ -1,0 +1,63 @@
+__author__ = "FredenFromSweden"
+__version__ = ".3"
+__date__ = "2015-12-27"
+
+# Set Log file path
+## CHANGE THIS TO THE FOLDER THE LOG FILE IS IN, IF NEEDED
+logFilePath = "/Library/Application Support/Perceptive Automation/Indigo 6/Logs/"
+
+
+import os
+import shutil
+
+# Make Log file names
+logFileCurrent = logFilePath + "indigo_log.txt"
+logFileLast = logFilePath + "indigo_log_last.txt"
+
+# Create variables & file if needed
+try:
+    indigo.variable.create("LogModTime", "")
+except:
+    pass
+try:
+    indigo.variable.create("LogSendFailure", "")
+except:
+    pass
+try:
+    open(logFileLast, 'a').close()
+except:
+    pass
+
+
+# Get Log file last modified time from Indigo variable
+lastLogModTime = indigo.variables["LogModTime"].value
+
+# Get Log file current modified time and update Indigo variable with it
+curLogModTime = os.path.getmtime(logFileCurrent)
+indigo.variable.updateValue("LogModTime", str(curLogModTime))
+
+# Test for Log file modification
+if (lastLogModTime != str(curLogModTime)):
+
+    # Open & read current Log file
+    fCur = open(logFileCurrent, "r")
+    logCurrent = fCur.readlines()
+    fCur.close()
+
+    # Get & set last Log file
+    fPrev = open(logFileLast, "r")
+    logPrev = fPrev.readlines()
+    fPrev.close()
+
+    # Duplicate the current log file
+    shutil.copy2(logFileCurrent, logFileLast)
+
+    # Get the differences between the log files
+    logDiff = (list(set(logCurrent) - set(logPrev)))
+
+    # Test each line for 'send failed'
+    for line in logDiff:
+        if "send failed (no acknowledgment)" in line:
+
+            # Set LogSendFailure variable to send failure notice
+            indigo.variable.updateValue("LogSendFailure", line)
